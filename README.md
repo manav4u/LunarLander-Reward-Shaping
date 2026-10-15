@@ -99,3 +99,39 @@ print(f"Unwrapped score: {mean:.2f} +/- {std:.2f}")
 
 - Schulman et al., [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347), 2017.
 - Ng, Harada & Russell, [Policy Invariance Under Reward Transformations: Theory and Application to Reward Shaping](https://ai.stanford.edu/~ang/papers/icml99-shaping.pdf), ICML 1999.
+
+
+## Selected trained checkpoint
+
+The selected PPO checkpoint is available at
+`models/ppo_lunar_lander_champion.zip`.
+
+- Environment: Gymnasium `LunarLander-v3`
+- Training algorithm: Stable-Baselines3 PPO (`MlpPolicy`)
+- Checkpoint timestep counter: 1,313,520
+- Evaluation: 500 deterministic episodes, seeds 600000–600499
+- Custom reward wrappers: disabled during evaluation
+
+### Final benchmark
+
+| Metric | Result |
+|---|---:|
+| Mean reward | 274.98 |
+| Median reward | 276.92 |
+| Reward standard deviation | 27.15 |
+| 5th-percentile reward | 239.09 |
+| 10th-percentile reward | 246.97 |
+| Episodes scoring at least 200 | 495 / 500 |
+| Mean episode length | 247.5 |
+
+The low-learning-rate fine-tuning candidate was not promoted.
+On the same 500 evaluation seeds, its mean reward was 271.67,
+compared with 274.98 for the selected checkpoint.
+
+Full benchmark details are stored in
+`results/final_champion_evaluation.json`.
+
+A reward threshold of 200 is a performance proxy, not direct
+proof of a successful physical landing. These results describe
+this evaluation run and do not guarantee identical results
+on every seed or software configuration.

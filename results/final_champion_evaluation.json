@@ -1,0 +1,36 @@
+{
+  "model_file": "models/ppo_lunar_lander_champion.zip",
+  "selection": "Periodic-best checkpoint from the continuation run. The subsequent low-learning-rate fine-tuning candidate was not promoted.",
+  "algorithm": "Stable-Baselines3 PPO with MlpPolicy",
+  "environment": "Gymnasium LunarLander-v3",
+  "checkpoint_training_timesteps": 1313520,
+  "evaluation": {
+    "policy_actions": "deterministic",
+    "custom_reward_wrappers": "off",
+    "episodes": 500,
+    "seed_range_inclusive": [
+      600000,
+      600499
+    ],
+    "mean_reward": 274.98,
+    "median_reward": 276.92,
+    "sample_std_reward": 27.15,
+    "fifth_percentile": 239.09,
+    "tenth_percentile": 246.97,
+    "episodes_reward_at_least_200": 495,
+    "mean_episode_length": 247.5
+  },
+  "fine_tuning_comparison": {
+    "candidate": "Experiment 2 best",
+    "candidate_mean_reward": 271.67,
+    "paired_mean_difference_champion_minus_candidate": 3.31,
+    "paired_95_percent_bootstrap_ci": [
+      0.33,
+      6.58
+    ]
+  },
+  "notes": [
+    "A reward of at least 200 is a reward-threshold proxy, not a direct measure of physical landing success.",
+    "Evaluation results are specific to the reported seeds."
+  ]
+}
