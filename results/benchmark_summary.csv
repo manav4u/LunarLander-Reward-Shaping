@@ -1,0 +1,5 @@
+agent,training_steps,episodes,mean_reward,std_reward,evaluation_wrappers
+random_agent,0,1,29.9152654368022,,OFF
+baseline_ppo,1000000,10,269.40555096256264,14.901857202225045,OFF
+reward_hacked_ppo,400000,10,-56.06624896067824,20.197663739741447,OFF
+fixed_shaped_ppo,1000000,10,266.53950027401015,23.28168159989957,OFF

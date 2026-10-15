@@ -1,0 +1,7 @@
+gymnasium[box2d]
+stable-baselines3[extra]
+numpy
+moviepy
+imageio
+imageio-ffmpeg
+ipython

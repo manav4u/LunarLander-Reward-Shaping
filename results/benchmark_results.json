@@ -1,0 +1,34 @@
+{
+  "evaluation_environment": "Gymnasium LunarLander-v3 (custom wrappers OFF)",
+  "deterministic": true,
+  "random_agent": {
+    "mean_reward": 29.9152654368022,
+    "std_reward": null,
+    "episodes": 1,
+    "training_steps": 0,
+    "episode_frames": 120
+  },
+  "baseline_ppo": {
+    "mean_reward": 269.40555096256264,
+    "std_reward": 14.901857202225045,
+    "episodes": 10,
+    "training_steps": 1000000
+  },
+  "reward_hacked_ppo": {
+    "mean_reward": -56.06624896067824,
+    "std_reward": 20.197663739741447,
+    "episodes": 10,
+    "training_steps": 400000
+  },
+  "fixed_shaped_ppo": {
+    "mean_reward": 266.53950027401015,
+    "std_reward": 23.28168159989957,
+    "episodes": 10,
+    "training_steps": 1000000
+  },
+  "notes": [
+    "Random agent score is one episode; PPO variants are 10-episode evaluation means.",
+    "Scores were evaluated with custom reward wrappers disabled.",
+    "The visible screenshot only exposes the means; standard deviations are included when available from the live runtime."
+  ]
+}
