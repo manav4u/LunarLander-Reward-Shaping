@@ -165,13 +165,19 @@ python scripts/evaluate_models.py \
 
 ---
 
-## Limitations
+## Limitations & Evaluation Protocol
 
-- **Single training seed per variant:** While the champion checkpoint is evaluated across 500 environment seeds (`600000–600499`), training multiple independent random seeds per wrapper configuration is required to establish variance across training runs.
+- **Single training seed per variant:** While the champion checkpoint is evaluated across 500 held-out environment seeds (`600000–600499`), training multiple independent random seeds per wrapper configuration is required to establish variance across training runs.
+- **Checkpoint selection vs. final evaluation:** Periodic checkpoints during continuation training were monitored on validation rollouts, and the selected candidate (`ppo_lunar_lander_champion.zip`, `1,313,520` steps) was subsequently benchmarked against the low-learning-rate fine-tuning candidate on the disjoint 500-seed test range (`seeds 600000–600499`).
 - **Reward threshold vs. physical landing:** A score of `≥ 200` is the standard Gymnasium performance threshold proxy, not a direct geometric check that both landing legs came to rest between the flags on every episode.
-- **Hardware/library sensitivity:** Box2D physics and PyTorch floating-point reductions can exhibit minor cross-platform drift across versions.
+- **Hardware/library sensitivity:** Box2D physics and PyTorch floating-point reductions can exhibit minor cross-platform drift across library versions; `scripts/evaluate_models.py` records exact evaluation parameters in its JSON output.
 
 ## References
 
 - Schulman et al., [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347), 2017.
 - Ng, Harada & Russell, [Policy Invariance Under Reward Transformations: Theory and Application to Reward Shaping](https://ai.stanford.edu/~ang/papers/icml99-shaping.pdf), ICML 1999.
+
+## License
+
+Code and experiment artifacts in this repository are released under the [MIT License](LICENSE).
+
