@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install lightweight test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install gymnasium numpy
+
+      - name: Compile Python modules
+        run: python -m py_compile src/reward_wrappers.py scripts/evaluate_models.py tests/test_reward_wrappers.py
+
+      - name: Run reward wrapper unit tests
+        run: python -m unittest discover -s tests -p "test_*.py" -v

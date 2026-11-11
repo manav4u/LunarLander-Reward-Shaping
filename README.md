@@ -1,137 +1,177 @@
 # Lunar Lander RL: Reward Shaping & Reward Hacking
 
-An empirical reinforcement-learning experiment using **Gymnasium `LunarLander-v3`** and **Proximal Policy Optimization (PPO)**. It compares an untrained random policy, a baseline PPO agent, a deliberately flawed reward bonus that can incentivize hovering, and a potential-difference shaping experiment with a time penalty.
+[![CI](https://github.com/manav4u/LunarLander-Reward-Shaping/actions/workflows/ci.yml/badge.svg)](https://github.com/manav4u/LunarLander-Reward-Shaping/actions/workflows/ci.yml)
 
-## Results from this run
+An empirical reinforcement-learning study using **Gymnasium `LunarLander-v3`** and **Proximal Policy Optimization (PPO)**. It compares an untrained random policy, a baseline PPO agent, a deliberately flawed reward bonus that induces **reward hacking (specification gaming)**, and a frame-to-frame **potential-difference shaping** wrapper with a per-step time penalty.
 
-All PPO scores below were evaluated on the **unwrapped environment with custom reward wrappers OFF**. PPO scores are deterministic evaluations over 10 episodes; the random policy entry is a single episode. The environment is generally considered solved around an average score of 200, but results depend on seed and training run.
+---
 
-| Agent | Training steps | Evaluation score | Interpretation |
+## Experimental Pipeline & Evaluation Discipline
+
+A common mistake in reward-shaping experiments is evaluating shaped policies with their custom training wrappers still attached, which conflates artificial shaping bonuses with true task performance. In this repository, **all checkpoints are evaluated strictly on the unwrapped `LunarLander-v3` environment (`custom_reward_wrappers = off`)**.
+
+```mermaid
+flowchart LR
+    subgraph Training["Training Variants (Gymnasium LunarLander-v3)"]
+        B["Baseline PPO\nUnwrapped Environment\n(1,000,000 steps)"]
+        H["Reward-Hacked PPO\nHoverHackWrapper (+1 airborne hover)\n(400,000 steps)"]
+        F["Fixed-Shaped PPO\nFixedRewardShapingWrapper (ΔΦ - 0.05)\n(1,000,000 steps)"]
+        C["Champion PPO\nContinuation Best Checkpoint\n(1,313,520 steps)"]
+    end
+
+    subgraph Eval["Unwrapped Evaluation Protocol (Wrappers OFF)"]
+        Env["Standard LunarLander-v3\nDeterministic Policy Actions"]
+        Metrics["Metrics & Bootstrap CI\nresults/*.json · results/*.csv"]
+    end
+
+    B --> Env
+    H --> Env
+    F --> Env
+    C --> Env
+    Env --> Metrics
+```
+
+---
+
+## Results Summary
+
+### 1. Four-Stage Ablation (`results/benchmark_results.json`)
+
+All PPO scores below were evaluated on the **unwrapped environment with custom reward wrappers OFF** over 10 deterministic episodes (the random policy reference is 1 episode). `LunarLander-v3` is conventionally considered solved around an average score of `200`.
+
+| Agent | Training steps | Unwrapped evaluation score | Behavioral interpretation |
 |---|---:|---:|---|
-| Untrained random policy | 0 | 29.92 | Single episode; a reference, not a stable estimate |
-| Baseline PPO | 1,000,000 | 269.41 ± 14.90 | Learns using the environment's original reward |
-| Reward-hacked PPO | 400,000 | -56.07 ± 20.20 | Raw task score falls despite the added training bonus |
-| Fixed-shaped PPO | 1,000,000 | 266.54 ± 23.28 | Compared against the same unwrapped task score |
+| Untrained random policy | 0 | `29.92` | Single-episode reference; crashes quickly |
+| Baseline PPO | 1,000,000 | `269.41 ± 14.90` | Learns stable descent using the environment's native reward |
+| Reward-hacked PPO (`HoverHackWrapper`) | 400,000 | `-56.07 ± 20.20` | Exploits the `+1` airborne hover bonus instead of landing; true task score collapses |
+| Fixed-shaped PPO (`FixedRewardShapingWrapper`) | 1,000,000 | `266.54 ± 23.28` | Eliminates hovering and lands reliably; mean is close to baseline in this run |
 
-The baseline and fixed-shaped means are close in this run; the results do **not** establish that the shaped agent is better than baseline. Run more seeds and compare success rate, crash rate, episode length, and score distributions before drawing a stronger conclusion. Full values are stored in [`results/benchmark_results.json`](results/benchmark_results.json) and [`results/benchmark_summary.csv`](results/benchmark_summary.csv).
+The baseline and fixed-shaped means (`269.41` vs. `266.54`) are within one standard deviation in this 10-episode run; these results do **not** claim that the shaped agent outperforms baseline PPO. Full values are stored in [`results/benchmark_results.json`](results/benchmark_results.json) and [`results/benchmark_summary.csv`](results/benchmark_summary.csv).
 
-## Visual progression
+### 2. 500-Seed Champion Checkpoint Benchmark (`results/final_champion_evaluation.json`)
+
+The periodic-best continuation checkpoint (`models/ppo_lunar_lander_champion.zip`, `1,313,520` timesteps) was evaluated across **500 deterministic episodes** (`seeds 600000–600499`) with custom wrappers disabled:
+
+| Metric | Result |
+|---|---:|
+| Evaluation episodes (`seeds 600000–600499`) | `500` |
+| Mean unwrapped reward | `274.98` |
+| Median unwrapped reward | `276.92` |
+| Sample standard deviation | `27.15` |
+| 5th-percentile reward | `239.09` |
+| 10th-percentile reward | `246.97` |
+| Episodes scoring `≥ 200` | `495 / 500` (`99.0%`) |
+| Mean episode length | `247.5` steps |
+
+A subsequent low-learning-rate fine-tuning candidate achieved a mean reward of `271.67` on the same 500 seeds (paired difference `+3.31` in favor of the champion checkpoint, 95% bootstrap CI `[0.33, 6.58]`), so the fine-tuned candidate was not promoted. Full details are recorded in [`results/final_champion_evaluation.json`](results/final_champion_evaluation.json).
+
+---
+
+## Visual Progression
 
 | Stage 1 — Random policy | Stage 2 — Baseline PPO |
 |---|---|
 | ![Random agent](videos/1_random_crash.gif) | ![Baseline PPO](videos/2_baseline_ppo.gif) |
 | [Original MP4](videos/1_random_crash.mp4) | [Original MP4](videos/2_baseline_ppo.mp4) |
 
-| Stage 3 — Reward hacking | Stage 4 — Fixed shaping |
+| Stage 3 — Reward hacking (`HoverHackWrapper`) | Stage 4 — Fixed shaping (`FixedRewardShapingWrapper`) |
 |---|---|
 | ![Reward-hacked policy](videos/3_hover_hack.gif) | ![Fixed-shaped PPO](videos/4_fixed_shaped.gif) |
 | [Original MP4](videos/3_hover_hack.mp4) | [Original MP4](videos/4_fixed_shaped.mp4) |
 
-GIFs are short previews; the full recorded MP4s are retained in `videos/`.
+---
 
-## What the experiment demonstrates
+## Mathematical Formulation of the Reward Wrappers (`src/reward_wrappers.py`)
 
-1. **Baseline learning:** PPO can learn useful control behavior from the environment's eight-dimensional observation vector.
-2. **Reward hacking / specification gaming:** a `+1` bonus for staying upright, slow, and airborne can reward behavior that does not accomplish the actual landing objective.
-3. **Reward shaping experiment:** a frame-to-frame potential difference plus a per-step time fee attempts to encourage alignment and discourage wasting time.
-4. **Evaluation discipline:** compare all policy variants with their training-only wrappers disabled so custom bonus rewards do not inflate evaluation scores.
+Let the 8-dimensional observation vector at step $t$ be:
+$$s_t = [x_t, y_t, v_{x,t}, v_{y,t}, \theta_t, \omega_t, \ell_{1,t}, \ell_{2,t}]$$
+where $(x_t, y_t)$ is lander position relative to the pad, $(v_{x,t}, v_{y,t})$ is linear velocity, $\theta_t$ is angle (tilt), $\omega_t$ is angular velocity, and $\ell_{1,t}, \ell_{2,t} \in \{0, 1\}$ are leg ground-contact indicators.
 
-## Method details
+### 1. Flawed Bonus (`HoverHackWrapper`)
+Adds a dense $+1.0$ step bonus whenever the lander is upright, moving slowly, and still airborne:
+$$r'_t = r_t + \mathbb{I}\!\left(|\theta_t| < 0.25 \;\land\; \sqrt{v_{x,t}^2 + v_{y,t}^2} < 0.35 \;\land\; (\ell_{1,t} + \ell_{2,t}) = 0\right)$$
+Because touching down sets $\ell_{1,t} + \ell_{2,t} > 0$ and terminates the episode, the agent discovers that hovering indefinitely collects more cumulative shaped return than landing—a textbook example of **specification gaming**.
 
-- **Environment:** Gymnasium `LunarLander-v3` (Box2D)
-- **Algorithm:** Stable-Baselines3 PPO with an MLP policy
-- **Observation:** horizontal position, vertical position, horizontal and vertical velocity, tilt, angular velocity, and two leg-contact indicators
-- **Action space:** discrete main/side thruster controls
-- **Evaluation:** deterministic policy actions; 10 episodes per PPO agent; custom wrappers off
+### 2. Potential-Difference Shaping (`FixedRewardShapingWrapper`)
+Defines a state potential function penalizing tilt, horizontal offset, and angular velocity:
+$$\Phi(s_t) = -15|\theta_t| - 10|x_t| - 5|\omega_t|$$
+and modifies the step reward using the undiscounted frame-to-frame potential difference plus a constant per-step time fee ($c = -0.05$):
+$$r'_t = r_t + \bigl(\Phi(s_t) - \Phi(s_{t-1})\bigr) - 0.05$$
+*Note on policy invariance:* Classic potential-based reward shaping (Ng, Harada & Russell, 1999) uses $\gamma \Phi(s_t) - \Phi(s_{t-1})$ without an additive step penalty to guarantee strict optimal-policy invariance. Here, $\Delta \Phi = \Phi(s_t) - \Phi(s_{t-1})$ with a $-0.05$ step fee is tested empirically as a practical shaping heuristic and evaluated against the true unwrapped task reward.
 
-The fixed wrapper in this repository uses `ΔΦ = Φ(sₜ) − Φ(sₜ₋₁)` and adds a `-0.05` per-step fee. This is the implementation tested here; it should not be described as a strict policy-invariance guarantee from the classic potential-based shaping theorem, whose usual discounted form uses `γΦ(s') − Φ(s)`.
+---
 
-## Repository map
+## Repository Map
 
 ```text
 .
+├── .github/workflows/ci.yml             # Automated unit tests for reward wrappers
 ├── README.md
 ├── requirements.txt
 ├── LICENSE
-├── notebooks/LunarLander_Reward_Shaping.ipynb
-├── scripts/train_experiment.py
-├── src/reward_wrappers.py
+├── notebooks/
+│   └── LunarLander_Reward_Shaping.ipynb # Interactive training & recording notebook
+├── src/
+│   └── reward_wrappers.py               # HoverHackWrapper & FixedRewardShapingWrapper
+├── scripts/
+│   ├── evaluate_models.py               # Reproducible multi-seed CLI evaluator
+│   └── train_experiment.py              # Colab training & artifact export pipeline
+├── tests/
+│   └── test_reward_wrappers.py          # Unit tests for wrapper math & edge cases
 ├── models/
 │   ├── ppo_lunar_lander_baseline.zip
 │   ├── ppo_lunar_lander_hacked.zip
-│   └── ppo_lunar_lander_fixed.zip
-├── videos/                 # 4 MP4 originals + 4 GIF previews
-└── results/                # JSON + CSV metrics
+│   ├── ppo_lunar_lander_fixed.zip
+│   └── ppo_lunar_lander_champion.zip
+├── videos/                              # 4 MP4 originals + 4 GIF previews
+└── results/                             # JSON + CSV evaluation benchmarks
 ```
 
-## Run locally
+---
 
-Install the system dependency and Python packages:
+## Run & Verify Locally
+
+### 1. Install Dependencies
 
 ```bash
-# Ubuntu/Debian
+# Ubuntu/Debian system packages required for Box2D & video rendering
 sudo apt-get update && sudo apt-get install -y swig ffmpeg
 python -m pip install -r requirements.txt
 ```
 
-Evaluate a saved checkpoint (the model is evaluated with custom wrappers off):
+### 2. Run Reward Wrapper Unit Tests
 
-```python
-import gymnasium as gym
-from stable_baselines3 import PPO
-from stable_baselines3.common.evaluation import evaluate_policy
-
-env = gym.make("LunarLander-v3")
-model = PPO.load("models/ppo_lunar_lander_baseline.zip")
-mean, std = evaluate_policy(model, env, n_eval_episodes=10, deterministic=True)
-env.close()
-print(f"Unwrapped score: {mean:.2f} +/- {std:.2f}")
+```bash
+python -m unittest discover -s tests -p "test_*.py" -v
 ```
+
+### 3. Reproduce Checkpoint Evaluations (`scripts/evaluate_models.py`)
+
+Evaluate all four saved checkpoints over 10 deterministic seeds:
+
+```bash
+python scripts/evaluate_models.py --episodes 10 --start-seed 600000
+```
+
+Reproduce the 500-episode champion benchmark (`seeds 600000–600499`):
+
+```bash
+python scripts/evaluate_models.py \
+  --models models/ppo_lunar_lander_champion.zip \
+  --episodes 500 \
+  --start-seed 600000 \
+  --output-json results/reproduced_champion_eval.json
+```
+
+---
 
 ## Limitations
 
-- These are results from one run and do not establish statistical significance.
-- Random-agent score is from one episode only.
-- The reward-hacked behavior should be assessed from the clip and additional rollout metrics, not inferred from reward alone.
-- The model files contain policy checkpoints, not a guarantee that training will reproduce identical results across hardware/library versions.
+- **Single training seed per variant:** While the champion checkpoint is evaluated across 500 environment seeds (`600000–600499`), training multiple independent random seeds per wrapper configuration is required to establish variance across training runs.
+- **Reward threshold vs. physical landing:** A score of `≥ 200` is the standard Gymnasium performance threshold proxy, not a direct geometric check that both landing legs came to rest between the flags on every episode.
+- **Hardware/library sensitivity:** Box2D physics and PyTorch floating-point reductions can exhibit minor cross-platform drift across versions.
 
 ## References
 
 - Schulman et al., [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347), 2017.
 - Ng, Harada & Russell, [Policy Invariance Under Reward Transformations: Theory and Application to Reward Shaping](https://ai.stanford.edu/~ang/papers/icml99-shaping.pdf), ICML 1999.
-
-
-## Selected trained checkpoint
-
-The selected PPO checkpoint is available at
-`models/ppo_lunar_lander_champion.zip`.
-
-- Environment: Gymnasium `LunarLander-v3`
-- Training algorithm: Stable-Baselines3 PPO (`MlpPolicy`)
-- Checkpoint timestep counter: 1,313,520
-- Evaluation: 500 deterministic episodes, seeds 600000–600499
-- Custom reward wrappers: disabled during evaluation
-
-### Final benchmark
-
-| Metric | Result |
-|---|---:|
-| Mean reward | 274.98 |
-| Median reward | 276.92 |
-| Reward standard deviation | 27.15 |
-| 5th-percentile reward | 239.09 |
-| 10th-percentile reward | 246.97 |
-| Episodes scoring at least 200 | 495 / 500 |
-| Mean episode length | 247.5 |
-
-The low-learning-rate fine-tuning candidate was not promoted.
-On the same 500 evaluation seeds, its mean reward was 271.67,
-compared with 274.98 for the selected checkpoint.
-
-Full benchmark details are stored in
-`results/final_champion_evaluation.json`.
-
-A reward threshold of 200 is a performance proxy, not direct
-proof of a successful physical landing. These results describe
-this evaluation run and do not guarantee identical results
-on every seed or software configuration.
